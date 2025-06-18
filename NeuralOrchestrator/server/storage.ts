@@ -7,6 +7,7 @@ import {
   type CodeExecution, type InsertCodeExecution, type KnowledgeGraphNode,
   type InsertKnowledgeGraphNode
 } from "@shared/schema";
+import { eq, desc } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
 import Database from 'better-sqlite3';
 import { migrate } from 'drizzle-orm/better-sqlite3/migrator';

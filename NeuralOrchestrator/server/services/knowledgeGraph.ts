@@ -1132,3 +1132,5 @@ export class KnowledgeGraph {
 }
 
 export const knowledgeGraph = new KnowledgeGraph();
+
+export const knowledgeGraph = new KnowledgeGraph();

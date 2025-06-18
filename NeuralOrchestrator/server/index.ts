@@ -2,7 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import { createServer } from 'http';
 import { Server as SocketIOServer } from 'socket.io';
-import { setupRoutes } from './routes';
+import { registerRoutes } from './routes';
 import { agentNetwork } from './services/agentNetwork';
 import { projectOrchestrator } from './services/projectOrchestrator';
 import { storage } from './storage';
@@ -22,7 +22,7 @@ app.use(express.json());
 app.use(express.static('../client/dist'));
 
 // Setup routes
-setupRoutes(app);
+await registerRoutes(app);
 
 // WebSocket setup
 io.on('connection', (socket) => {

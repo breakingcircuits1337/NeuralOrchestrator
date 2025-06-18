@@ -169,6 +169,9 @@ export class AIOrchestrator extends EventEmitter {
       throw new Error(`Code generation failed: ${error.message}`);
     }
   }
+}
+
+export const aiOrchestrator = new AIOrchestrator();
 
   async conductResearch(
     query: string,

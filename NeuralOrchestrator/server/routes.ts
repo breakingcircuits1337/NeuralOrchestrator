@@ -182,6 +182,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/projects/:projectId/knowledge/evolve', knowledgeGraphRoutes.evolveKnowledgeGraph);
   app.get('/api/projects/:projectId/knowledge/related', knowledgeGraphRoutes.findRelatedNodes);
 
+  // Health check
+  app.get("/api/health", async (req, res) => {
+    res.json({ 
+      status: "online", 
+      timestamp: new Date().toISOString(),
+      agents: agentNetwork ? await agentNetwork.getAgentStatuses().then(statuses => statuses.size) : 0
+    });
+  });
+
   // AI Orchestration
   app.post("/api/projects/:id/orchestrate", async (req, res) => {
     try {

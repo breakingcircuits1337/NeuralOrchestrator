@@ -34,6 +34,17 @@ export class ProjectOrchestrator extends EventEmitter {
     super();
   }
 
+  async initialize(): Promise<void> {
+    console.log('Project Orchestrator initialized');
+    this.setupEventHandlers();
+  }
+
+  private setupEventHandlers(): void {
+    this.on('orchestration_update', (update) => {
+      console.log('Orchestration update:', update);
+    });
+  }
+
   async orchestrateProject(
     goal: string,
     projectId: number,

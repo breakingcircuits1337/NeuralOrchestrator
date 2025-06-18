@@ -158,3 +158,48 @@ export const useIDEStore = create<IDEState & IDEActions>((set, get) => ({
   },
   clearChatMessages: () => set({ chatMessages: [] })
 }));
+import { create } from 'zustand';
+
+interface Project {
+  id: number;
+  name: string;
+  description: string;
+  status: 'active' | 'completed' | 'paused';
+}
+
+interface OrchestrationUpdate {
+  type: string;
+  phase?: number;
+  task?: string;
+  message: string;
+  progress?: number;
+  metadata?: Record<string, any>;
+}
+
+interface IDEStore {
+  currentProject: Project | null;
+  isOrchestrating: boolean;
+  orchestrationUpdates: OrchestrationUpdate[];
+  setCurrentProject: (project: Project | null) => void;
+  setIsOrchestrating: (isOrchestrating: boolean) => void;
+  addOrchestrationUpdate: (update: OrchestrationUpdate) => void;
+  clearOrchestrationUpdates: () => void;
+}
+
+export const useIDEStore = create<IDEStore>((set) => ({
+  currentProject: {
+    id: 1,
+    name: 'Neural IDE Demo',
+    description: 'AI-powered development environment',
+    status: 'active'
+  },
+  isOrchestrating: false,
+  orchestrationUpdates: [],
+  setCurrentProject: (project) => set({ currentProject: project }),
+  setIsOrchestrating: (isOrchestrating) => set({ isOrchestrating }),
+  addOrchestrationUpdate: (update) => 
+    set((state) => ({ 
+      orchestrationUpdates: [...state.orchestrationUpdates, update] 
+    })),
+  clearOrchestrationUpdates: () => set({ orchestrationUpdates: [] })
+}));

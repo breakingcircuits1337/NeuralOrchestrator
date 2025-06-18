@@ -2,10 +2,11 @@ import express from 'express';
 import cors from 'cors';
 import { createServer } from 'http';
 import { Server as SocketIOServer } from 'socket.io';
-import { registerRoutes } from './routes';
+import { storage } from './storage';
 import { agentNetwork } from './services/agentNetwork';
 import { projectOrchestrator } from './services/projectOrchestrator';
-import { storage } from './storage';
+import { registerRoutes } from './routes';
+import path from 'path';
 
 const app = express();
 const server = createServer(app);
@@ -15,11 +16,12 @@ const io = new SocketIOServer(server, {
     methods: ["GET", "POST"]
   }
 });
+
 const PORT = process.env.PORT || 5000;
 
 app.use(cors());
 app.use(express.json());
-app.use(express.static('../client/dist'));
+app.use(express.static(path.join(__dirname, '../../client/dist')));
 
 // Setup routes
 await registerRoutes(app);

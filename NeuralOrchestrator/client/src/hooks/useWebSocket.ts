@@ -164,3 +164,60 @@ export function useWebSocket() {
     startProjectOrchestration
   };
 }
+import { useEffect, useState, useCallback } from 'react';
+import { io, Socket } from 'socket.io-client';
+
+interface WebSocketHook {
+  socket: Socket | null;
+  isConnected: boolean;
+  startProjectOrchestration: (goal: string, projectId: number) => void;
+  joinProject: (projectId: number) => void;
+}
+
+export function useWebSocket(): WebSocketHook {
+  const [socket, setSocket] = useState<Socket | null>(null);
+  const [isConnected, setIsConnected] = useState(false);
+
+  useEffect(() => {
+    const newSocket = io('http://localhost:5000');
+    
+    newSocket.on('connect', () => {
+      console.log('Connected to server');
+      setIsConnected(true);
+    });
+
+    newSocket.on('disconnect', () => {
+      console.log('Disconnected from server');
+      setIsConnected(false);
+    });
+
+    newSocket.on('orchestration_update', (update) => {
+      console.log('Orchestration update:', update);
+    });
+
+    setSocket(newSocket);
+
+    return () => {
+      newSocket.close();
+    };
+  }, []);
+
+  const startProjectOrchestration = useCallback((goal: string, projectId: number) => {
+    if (socket) {
+      socket.emit('start_orchestration', { goal, projectId });
+    }
+  }, [socket]);
+
+  const joinProject = useCallback((projectId: number) => {
+    if (socket) {
+      socket.emit('join-project', projectId);
+    }
+  }, [socket]);
+
+  return {
+    socket,
+    isConnected,
+    startProjectOrchestration,
+    joinProject
+  };
+}

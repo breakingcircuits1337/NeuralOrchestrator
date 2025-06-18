@@ -17,7 +17,7 @@ mode = "sequential"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cd NeuralOrchestrator"
+args = "cd NeuralOrchestrator/server"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"

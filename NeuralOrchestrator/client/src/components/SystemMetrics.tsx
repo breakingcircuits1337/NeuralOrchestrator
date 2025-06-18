@@ -154,3 +154,143 @@ export function SystemMetrics() {
     </div>
   );
 }
+import { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+import { Progress } from './ui/progress';
+import { Badge } from './ui/badge';
+import { Cpu, Memory, Network, Activity } from 'lucide-react';
+
+interface SystemMetrics {
+  cpuUsage: number;
+  memoryUsage: number;
+  networkActivity: number;
+  agentLoad: number;
+  totalRequests: number;
+  activeConnections: number;
+}
+
+export function SystemMetrics() {
+  const [metrics, setMetrics] = useState<SystemMetrics>({
+    cpuUsage: 0,
+    memoryUsage: 0,
+    networkActivity: 0,
+    agentLoad: 0,
+    totalRequests: 0,
+    activeConnections: 0
+  });
+
+  useEffect(() => {
+    // Simulate real metrics
+    const interval = setInterval(() => {
+      setMetrics({
+        cpuUsage: Math.floor(Math.random() * 40) + 20,
+        memoryUsage: Math.floor(Math.random() * 30) + 50,
+        networkActivity: Math.floor(Math.random() * 60) + 10,
+        agentLoad: Math.floor(Math.random() * 50) + 30,
+        totalRequests: Math.floor(Math.random() * 1000) + 5000,
+        activeConnections: Math.floor(Math.random() * 50) + 100
+      });
+    }, 2000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  const getUsageColor = (usage: number) => {
+    if (usage < 30) return 'text-green-500';
+    if (usage < 70) return 'text-yellow-500';
+    return 'text-red-500';
+  };
+
+  return (
+    <div className="space-y-4">
+      <h3 className="text-lg font-semibold text-white">System Metrics</h3>
+      
+      <div className="grid grid-cols-2 gap-4">
+        <Card className="bg-carbon-90 border-carbon-60">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm text-carbon-text-02 flex items-center gap-2">
+              <Cpu className="w-4 h-4" />
+              CPU Usage
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <span className={`text-lg font-bold ${getUsageColor(metrics.cpuUsage)}`}>
+                  {metrics.cpuUsage}%
+                </span>
+              </div>
+              <Progress value={metrics.cpuUsage} className="h-2" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-carbon-90 border-carbon-60">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm text-carbon-text-02 flex items-center gap-2">
+              <Memory className="w-4 h-4" />
+              Memory
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <span className={`text-lg font-bold ${getUsageColor(metrics.memoryUsage)}`}>
+                  {metrics.memoryUsage}%
+                </span>
+              </div>
+              <Progress value={metrics.memoryUsage} className="h-2" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-carbon-90 border-carbon-60">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm text-carbon-text-02 flex items-center gap-2">
+              <Network className="w-4 h-4" />
+              Network
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <span className={`text-lg font-bold ${getUsageColor(metrics.networkActivity)}`}>
+                  {metrics.networkActivity}%
+                </span>
+              </div>
+              <Progress value={metrics.networkActivity} className="h-2" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-carbon-90 border-carbon-60">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm text-carbon-text-02 flex items-center gap-2">
+              <Activity className="w-4 h-4" />
+              Agent Load
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <span className={`text-lg font-bold ${getUsageColor(metrics.agentLoad)}`}>
+                  {metrics.agentLoad}%
+                </span>
+              </div>
+              <Progress value={metrics.agentLoad} className="h-2" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="flex gap-4">
+        <Badge variant="outline" className="text-carbon-text-02">
+          Requests: {metrics.totalRequests.toLocaleString()}
+        </Badge>
+        <Badge variant="outline" className="text-carbon-text-02">
+          Connections: {metrics.activeConnections}
+        </Badge>
+      </div>
+    </div>
+  );
+}

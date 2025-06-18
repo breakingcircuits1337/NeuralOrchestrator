@@ -7,8 +7,13 @@ import {
   type CodeExecution, type InsertCodeExecution, type KnowledgeGraphNode,
   type InsertKnowledgeGraphNode
 } from "@shared/schema";
-import { db } from "./db";
-import { eq, and, desc } from "drizzle-orm";
+import { drizzle } from 'drizzle-orm/better-sqlite3';
+import Database from 'better-sqlite3';
+import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
+import * as schema from '@shared/schema';
+
+const sqlite = new Database('./database.db');
+export const db = drizzle(sqlite, { schema });
 
 export interface IStorage {
   // Users
@@ -54,9 +59,203 @@ export interface IStorage {
   getKnowledgeGraph(projectId: number): Promise<KnowledgeGraphNode[]>;
   createKnowledgeNode(node: InsertKnowledgeGraphNode): Promise<KnowledgeGraphNode>;
   updateKnowledgeNode(id: number, updates: Partial<KnowledgeGraphNode>): Promise<KnowledgeGraphNode>;
+
+  initialize(): Promise<void>;
+  getProjects(): Promise<any[]>;
+  createProject(data: { name: string; description?: string }): Promise<any>;
+  getProject(id: number): Promise<any>;
+  getAgents(projectId?: number): Promise<any[]>;
+  createAgent(data: any): Promise<any>;
+  getTasks(projectId: number): Promise<any[]>;
+  createTask(data: any): Promise<any>;
+  getKnowledgeGraph(projectId: number): Promise<any[]>;
+  createKnowledgeNode(data: any): Promise<any>;
+  updateKnowledgeNode(id: number, data: any): Promise<any>;
 }
 
-export class DatabaseStorage implements IStorage {
+export const storage: IStorage = {
+  async initialize() {
+    try {
+      console.log('Initializing database...');
+
+      // Create tables if they don't exist
+      sqlite.exec(`
+        CREATE TABLE IF NOT EXISTS projects (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT NOT NULL,
+          description TEXT,
+          status TEXT DEFAULT 'active',
+          created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+          updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS agents (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          role TEXT NOT NULL,
+          status TEXT DEFAULT 'idle',
+          current_task_id INTEGER,
+          llm_provider TEXT NOT NULL,
+          project_id INTEGER,
+          capabilities TEXT,
+          performance_metrics TEXT,
+          created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+          updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (project_id) REFERENCES projects (id),
+          FOREIGN KEY (current_task_id) REFERENCES tasks (id)
+        );
+
+        CREATE TABLE IF NOT EXISTS tasks (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          project_id INTEGER NOT NULL,
+          phase_id INTEGER,
+          title TEXT NOT NULL,
+          description TEXT,
+          status TEXT DEFAULT 'pending',
+          priority TEXT DEFAULT 'medium',
+          assigned_agents TEXT,
+          dependencies TEXT,
+          outputs TEXT,
+          created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+          updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (project_id) REFERENCES projects (id)
+        );
+
+        CREATE TABLE IF NOT EXISTS knowledge_graph_nodes (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          project_id INTEGER NOT NULL,
+          node_type TEXT NOT NULL,
+          node_id TEXT NOT NULL,
+          node_data TEXT,
+          connections TEXT,
+          metadata TEXT,
+          created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+          updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (project_id) REFERENCES projects (id)
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_agents_project ON agents(project_id);
+        CREATE INDEX IF NOT EXISTS idx_tasks_project ON tasks(project_id);
+        CREATE INDEX IF NOT EXISTS idx_knowledge_project ON knowledge_graph_nodes(project_id);
+        CREATE INDEX IF NOT EXISTS idx_knowledge_node_id ON knowledge_graph_nodes(node_id);
+      `);
+
+      console.log('Database tables created successfully');
+    } catch (error) {
+      console.error('Database initialization failed:', error);
+      throw error;
+    }
+  },
+
+  async getProjects() {
+    const stmt = sqlite.prepare('SELECT * FROM projects ORDER BY created_at DESC');
+    return stmt.all();
+  },
+
+  async createProject(data: { name: string; description?: string }) {
+    const stmt = sqlite.prepare(
+      'INSERT INTO projects (name, description) VALUES (?, ?) RETURNING *'
+    );
+    return stmt.get(data.name, data.description || null);
+  },
+
+  async getProject(id: number) {
+    const stmt = sqlite.prepare('SELECT * FROM projects WHERE id = ?');
+    return stmt.get(id);
+  },
+
+  async getAgents(projectId?: number) {
+    let query = 'SELECT * FROM agents';
+    let params: any[] = [];
+
+    if (projectId) {
+      query += ' WHERE project_id = ?';
+      params.push(projectId);
+    }
+
+    query += ' ORDER BY created_at DESC';
+
+    const stmt = sqlite.prepare(query);
+    return stmt.all(...params);
+  },
+
+  async createAgent(data: any) {
+    const stmt = sqlite.prepare(`
+      INSERT INTO agents (role, status, llm_provider, project_id, capabilities, performance_metrics)
+      VALUES (?, ?, ?, ?, ?, ?) RETURNING *
+    `);
+    return stmt.get(
+      data.role,
+      data.status || 'idle',
+      data.llmProvider,
+      data.projectId || null,
+      JSON.stringify(data.capabilities || []),
+      JSON.stringify(data.performanceMetrics || {})
+    );
+  },
+
+  async getTasks(projectId: number) {
+    const stmt = sqlite.prepare('SELECT * FROM tasks WHERE project_id = ? ORDER BY created_at DESC');
+    return stmt.all(projectId);
+  },
+
+  async createTask(data: any) {
+    const stmt = sqlite.prepare(`
+      INSERT INTO tasks (project_id, phase_id, title, description, status, priority, assigned_agents, dependencies)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING *
+    `);
+    return stmt.get(
+      data.projectId,
+      data.phaseId || null,
+      data.title,
+      data.description || null,
+      data.status || 'pending',
+      data.priority || 'medium',
+      JSON.stringify(data.assignedAgents || []),
+      JSON.stringify(data.dependencies || [])
+    );
+  },
+
+  async getKnowledgeGraph(projectId: number) {
+    const stmt = sqlite.prepare('SELECT * FROM knowledge_graph_nodes WHERE project_id = ?');
+    const rows = stmt.all(projectId);
+
+    return rows.map(row => ({
+      ...row,
+      nodeData: JSON.parse(row.node_data || '{}'),
+      connections: JSON.parse(row.connections || '[]'),
+      metadata: JSON.parse(row.metadata || '{}')
+    }));
+  },
+
+  async createKnowledgeNode(data: any) {
+    const stmt = sqlite.prepare(`
+      INSERT INTO knowledge_graph_nodes (project_id, node_type, node_id, node_data, connections, metadata)
+      VALUES (?, ?, ?, ?, ?, ?) RETURNING *
+    `);
+    return stmt.get(
+      data.projectId,
+      data.nodeType,
+      data.nodeId,
+      JSON.stringify(data.nodeData || {}),
+      JSON.stringify(data.connections || []),
+      JSON.stringify(data.metadata || {})
+    );
+  },
+
+  async updateKnowledgeNode(id: number, data: any) {
+    const stmt = sqlite.prepare(`
+      UPDATE knowledge_graph_nodes 
+      SET node_data = ?, connections = ?, metadata = ?, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ? RETURNING *
+    `);
+    return stmt.get(
+      JSON.stringify(data.nodeData || {}),
+      JSON.stringify(data.connections || []),
+      JSON.stringify(data.metadata || {}),
+      id
+    );
+  },
+
   // Users
   async getUser(id: number): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
@@ -74,18 +273,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Projects
-  async getProject(id: number): Promise<Project | undefined> {
-    const [project] = await db.select().from(projects).where(eq(projects.id, id));
-    return project || undefined;
-  }
-
   async getProjectsByUser(userId: number): Promise<Project[]> {
     return await db.select().from(projects).where(eq(projects.userId, userId)).orderBy(desc(projects.createdAt));
-  }
-
-  async createProject(insertProject: InsertProject): Promise<Project> {
-    const [project] = await db.insert(projects).values(insertProject).returning();
-    return project;
   }
 
   async updateProject(id: number, updates: Partial<Project>): Promise<Project> {
@@ -111,11 +300,6 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(agents);
   }
 
-  async createAgent(insertAgent: InsertAgent): Promise<Agent> {
-    const [agent] = await db.insert(agents).values(insertAgent).returning();
-    return agent;
-  }
-
   async updateAgent(id: string, updates: Partial<Agent>): Promise<Agent> {
     const [agent] = await db.update(agents).set({ ...updates, updatedAt: new Date() }).where(eq(agents.id, id)).returning();
     return agent;
@@ -137,17 +321,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Tasks
-  async getTasks(projectId: number): Promise<Task[]> {
-    return await db.select().from(tasks).where(eq(tasks.projectId, projectId)).orderBy(tasks.createdAt);
-  }
-
   async getTasksByPhase(phaseId: number): Promise<Task[]> {
     return await db.select().from(tasks).where(eq(tasks.phaseId, phaseId)).orderBy(tasks.createdAt);
-  }
-
-  async createTask(insertTask: InsertTask): Promise<Task> {
-    const [task] = await db.insert(tasks).values(insertTask).returning();
-    return task;
   }
 
   async updateTask(id: number, updates: Partial<Task>): Promise<Task> {
@@ -181,19 +356,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Knowledge Graph
-  async getKnowledgeGraph(projectId: number): Promise<KnowledgeGraphNode[]> {
-    return await db.select().from(knowledgeGraph).where(eq(knowledgeGraph.projectId, projectId));
-  }
-
   async createKnowledgeNode(insertNode: InsertKnowledgeGraphNode): Promise<KnowledgeGraphNode> {
     const [node] = await db.insert(knowledgeGraph).values(insertNode).returning();
     return node;
   }
 
-  async updateKnowledgeNode(id: number, updates: Partial<KnowledgeGraphNode>): Promise<KnowledgeGraphNode> {
-    const [node] = await db.update(knowledgeGraph).set({ ...updates, updatedAt: new Date() }).where(eq(knowledgeGraph.id, id)).returning();
-    return node;
-  }
-}
-
-export const storage = new DatabaseStorage();
+  
+};

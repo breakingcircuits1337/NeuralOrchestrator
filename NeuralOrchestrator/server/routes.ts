@@ -8,6 +8,7 @@ import { projectOrchestrator } from "./services/projectOrchestrator";
 import { insertProjectSchema, insertTaskSchema, insertAgentSessionSchema } from "@shared/schema";
 import { z } from "zod";
 import { knowledgeGraphRoutes } from './routes/knowledgeGraph';
+import { Request, Response } from 'express';
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);

@@ -8,7 +8,7 @@ channel = "stable-24_05"
 run = ["sh", "-c", "npm run build"]
 
 [workflows]
-runButton = "Dev Server"
+runButton = "Start Neural Orchestrator"
 
 [[workflows.workflow]]
 name = "Dev Server"
@@ -18,6 +18,23 @@ mode = "sequential"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "cd NeuralOrchestrator"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm install"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm run dev"
+
+[[workflows.workflow]]
+name = "Start Neural Orchestrator"
+author = 43891218
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd NeuralOrchestrator/server"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"

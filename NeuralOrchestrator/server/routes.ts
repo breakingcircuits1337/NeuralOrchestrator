@@ -7,13 +7,14 @@ import { agentNetwork } from "./services/agentNetwork";
 import { projectOrchestrator } from "./services/projectOrchestrator";
 import { insertProjectSchema, insertTaskSchema, insertAgentSessionSchema } from "@shared/schema";
 import { z } from "zod";
+import { knowledgeGraphRoutes } from './routes/knowledgeGraph';
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
 
   // WebSocket server for real-time communication
   const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
-  
+
   const clients = new Map<string, WebSocket>();
 
   wss.on('connection', (ws: WebSocket) => {
@@ -25,7 +26,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     ws.on('message', async (data) => {
       try {
         const message = JSON.parse(data.toString());
-        
+
         switch (message.type) {
           case 'agent_status_request':
             const agentStatuses = await agentNetwork.getAgentStatuses();
@@ -34,7 +35,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               data: agentStatuses
             }));
             break;
-            
+
           case 'project_orchestration_request':
             const orchestrationResult = await projectOrchestrator.orchestrateProject(
               message.data.goal,
@@ -46,7 +47,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 }));
               }
             );
-            
+
             ws.send(JSON.stringify({
               type: 'orchestration_complete',
               data: orchestrationResult
@@ -80,7 +81,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   };
 
   // REST API Routes
-  
+
   // Projects
   app.get("/api/projects", async (req, res) => {
     try {
@@ -96,11 +97,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const projectId = parseInt(req.params.id);
       const project = await storage.getProject(projectId);
-      
+
       if (!project) {
         return res.status(404).json({ error: "Project not found" });
       }
-      
+
       res.json(project);
     } catch (error) {
       res.status(500).json({ error: error.message });
@@ -113,7 +114,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ...req.body,
         userId: 1 // Would normally come from auth
       });
-      
+
       const project = await storage.createProject(validatedData);
       res.json(project);
     } catch (error) {
@@ -160,7 +161,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/projects/:id/tasks", async (req, res) => {
+  // Get project tasks
+  app.get('/api/projects/:id/tasks', async (req, res) => {
     try {
       const projectId = parseInt(req.params.id);
       const tasks = await storage.getTasks(projectId);
@@ -169,6 +171,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: error.message });
     }
   });
+
+  // Knowledge Graph endpoints
+  app.get('/api/projects/:projectId/knowledge', knowledgeGraphRoutes.getProjectKnowledge);
+  app.post('/api/projects/:projectId/knowledge/similarity', knowledgeGraphRoutes.analyzeSemanticSimilarity);
+  app.get('/api/projects/:projectId/knowledge/clusters', knowledgeGraphRoutes.findSemanticClusters);
+  app.get('/api/projects/:projectId/knowledge/suggestions', knowledgeGraphRoutes.suggestConnections);
+  app.get('/api/projects/:projectId/knowledge/metrics', knowledgeGraphRoutes.calculateGraphMetrics);
+  app.post('/api/projects/:projectId/knowledge/evolve', knowledgeGraphRoutes.evolveKnowledgeGraph);
+  app.get('/api/projects/:projectId/knowledge/related', knowledgeGraphRoutes.findRelatedNodes);
 
   // AI Orchestration
   app.post("/api/projects/:id/orchestrate", async (req, res) => {
@@ -238,7 +249,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ...req.body,
         projectId
       });
-      
+
       const session = await storage.createAgentSession(validatedData);
       res.json(session);
     } catch (error) {

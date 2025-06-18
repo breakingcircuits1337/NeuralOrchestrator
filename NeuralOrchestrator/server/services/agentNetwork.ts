@@ -67,7 +67,7 @@ export class AgentNetwork extends EventEmitter {
   private async createAgentNetwork(): Promise<void> {
     console.log('Creating 250-agent neural network...');
     
-    const llmProviders = ['openai', 'anthropic', 'gemini', 'mistral', 'groq'];
+    const llmProviders = ['gemini', 'mistral', 'groq'];
     const roles: AgentRole[] = [
       'architect', 'planner', 'researcher', 'analyzer', 'coder', 'tester',
       'optimizer', 'validator', 'documenter', 'deployer', 'monitor', 'debugger',

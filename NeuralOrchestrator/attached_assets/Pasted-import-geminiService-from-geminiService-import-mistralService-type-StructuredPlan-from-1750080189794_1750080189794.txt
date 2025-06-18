@@ -1,0 +1,300 @@
+import { geminiService } from './geminiService';
+import { mistralService, type StructuredPlan } from './mistralService';
+import { groqService, type ResearchResult } from './groqService';
+import { elevenlabsService } from './elevenlabsService';
+import { codeExecutor } from './codeExecutor';
+import { fileManager } from './fileManager';
+import { storage } from '../storage';
+import type { InsertAgentSession, InsertProjectPlan, InsertCodeExecution } from '@shared/schema';
+
+export interface AgentMessage {
+  id: string;
+  agentType: 'planning' | 'research' | 'execution' | 'deployment';
+  content: string;
+  timestamp: Date;
+  metadata?: Record<string, any>;
+}
+
+export interface AgentStatus {
+  agentType: 'planning' | 'research' | 'execution' | 'deployment';
+  status: 'idle' | 'active' | 'completed' | 'error';
+  currentTask?: string;
+  progress?: number;
+}
+
+export interface OrchestrationResult {
+  success: boolean;
+  projectId?: string;
+  plan?: StructuredPlan;
+  research?: ResearchResult;
+  generatedCode?: string;
+  deploymentUrl?: string;
+  messages: AgentMessage[];
+  errors?: string[];
+}
+
+export class AIOrchestrator {
+  private activeAgents: Map<string, AgentStatus> = new Map();
+  private sessionMessages: Map<string, AgentMessage[]> = new Map();
+
+  async orchestrateProject(
+    userGoal: string,
+    projectId: number,
+    socketCallback?: (message: AgentMessage) => void
+  ): Promise<OrchestrationResult> {
+    const sessionId = `session_${Date.now()}`;
+    this.sessionMessages.set(sessionId, []);
+    
+    const result: OrchestrationResult = {
+      success: false,
+      messages: []
+    };
+
+    try {
+      // Phase 1: Planning Agent (Mistral)
+      await this.updateAgentStatus('planning', 'active', 'Creating project plan...');
+      const planningMessage = await this.addMessage(sessionId, 'planning', 'Starting project planning phase...', socketCallback);
+      
+      const plan = await mistralService.generateProjectPlan(userGoal);
+      
+      // Save plan to storage
+      const savedPlan = await storage.createProjectPlan({
+        projectId,
+        name: plan.projectName,
+        phases: plan.phases as any
+      });
+
+      result.plan = plan;
+      await this.addMessage(sessionId, 'planning', `Project plan created with ${plan.phases.length} phases`, socketCallback);
+      await this.updateAgentStatus('planning', 'completed');
+
+      // Phase 2: Research Agent (Groq)
+      await this.updateAgentStatus('research', 'active', 'Conducting research...');
+      await this.addMessage(sessionId, 'research', 'Gathering information and best practices...', socketCallback);
+      
+      const researchQuery = `Best practices and technologies for: ${userGoal}`;
+      const research = await groqService.conductResearch(researchQuery, plan.projectName);
+      
+      result.research = research;
+      await this.addMessage(sessionId, 'research', `Research completed with ${research.findings.length} key findings`, socketCallback);
+      await this.updateAgentStatus('research', 'completed');
+
+      // Phase 3: Execution Agent (Gemini)
+      await this.updateAgentStatus('execution', 'active', 'Generating and executing code...');
+      await this.addMessage(sessionId, 'execution', 'Starting code generation...', socketCallback);
+      
+      const codePrompt = `Create a complete implementation for: ${userGoal}
+      
+      Project Plan: ${JSON.stringify(plan, null, 2)}
+      Research Findings: ${research.summary}
+      
+      Please provide complete, production-ready code with proper structure and documentation.`;
+      
+      const codeResponse = await geminiService.generateCode(codePrompt);
+      result.generatedCode = codeResponse.text;
+      
+      // Save generated code to project
+      const projectStructure = await fileManager.getProjectStructure(projectId.toString());
+      if (!projectStructure) {
+        // Create project structure if it doesn't exist
+        await fileManager.createProject(plan.projectName);
+      }
+
+      // Save main code file
+      await fileManager.saveFileContent(projectId.toString(), 'src/main.js', codeResponse.text);
+      
+      // Execute code for validation
+      await this.addMessage(sessionId, 'execution', 'Code generated, validating execution...', socketCallback);
+      
+      const executionResult = await codeExecutor.executeCode(codeResponse.text, 'javascript');
+      
+      // Save execution result
+      await storage.createCodeExecution({
+        projectId,
+        code: codeResponse.text,
+        language: 'javascript'
+      });
+
+      if (executionResult.success) {
+        await this.addMessage(sessionId, 'execution', 'Code executed successfully!', socketCallback);
+      } else {
+        await this.addMessage(sessionId, 'execution', `Code execution warning: ${executionResult.error}`, socketCallback);
+      }
+
+      await this.updateAgentStatus('execution', 'completed');
+
+      // Phase 4: Deployment Agent
+      await this.updateAgentStatus('deployment', 'active', 'Preparing deployment...');
+      await this.addMessage(sessionId, 'deployment', 'Preparing project for deployment...', socketCallback);
+      
+      // Simulate deployment process
+      const deploymentSteps = [
+        'Optimizing code structure...',
+        'Running final tests...',
+        'Preparing deployment package...',
+        'Deployment ready!'
+      ];
+
+      for (let i = 0; i < deploymentSteps.length; i++) {
+        await this.addMessage(sessionId, 'deployment', deploymentSteps[i], socketCallback);
+        await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate processing time
+      }
+
+      result.deploymentUrl = `https://project-${projectId}.neurocode.ai`;
+      await this.updateAgentStatus('deployment', 'completed');
+
+      result.success = true;
+      result.projectId = projectId.toString();
+      result.messages = this.sessionMessages.get(sessionId) || [];
+
+      // Generate success audio
+      await elevenlabsService.speakSuccess(`Project ${plan.projectName} has been successfully created and deployed!`);
+
+    } catch (error) {
+      console.error('Orchestration error:', error);
+      result.errors = [error.message];
+      result.messages = this.sessionMessages.get(sessionId) || [];
+      
+      // Generate error audio
+      await elevenlabsService.speakError(`Project orchestration failed: ${error.message}`);
+      
+      // Update any active agents to error state
+      for (const [agentType, status] of this.activeAgents) {
+        if (status.status === 'active') {
+          await this.updateAgentStatus(agentType as any, 'error');
+        }
+      }
+    }
+
+    return result;
+  }
+
+  async getAgentStatus(): Promise<Map<string, AgentStatus>> {
+    return this.activeAgents;
+  }
+
+  async generateCodeWithContext(
+    prompt: string,
+    projectId: number,
+    language: string = 'javascript'
+  ): Promise<{
+    code: string;
+    explanation: string;
+    suggestions: string[];
+  }> {
+    try {
+      // Get project context
+      const projectStructure = await fileManager.getProjectStructure(projectId.toString());
+      const context = projectStructure ? JSON.stringify(projectStructure, null, 2) : '';
+
+      // Generate code with Gemini
+      const codeResponse = await geminiService.generateCode(prompt, context);
+      
+      // Analyze the generated code
+      const analysisResponse = await geminiService.analyzeCode(codeResponse.text, language);
+      
+      // Execute for validation
+      const executionResult = await codeExecutor.executeCode(codeResponse.text, language);
+      
+      // Save execution result
+      await storage.createCodeExecution({
+        projectId,
+        code: codeResponse.text,
+        language
+      });
+
+      const suggestions = analysisResponse.text.split('\n')
+        .filter(line => line.trim().startsWith('-') || line.trim().startsWith('•'))
+        .map(line => line.trim().substring(1).trim())
+        .slice(0, 5); // Top 5 suggestions
+
+      return {
+        code: codeResponse.text,
+        explanation: analysisResponse.text,
+        suggestions
+      };
+    } catch (error) {
+      console.error('Code generation error:', error);
+      throw new Error(`Code generation failed: ${error.message}`);
+    }
+  }
+
+  async conductResearchWithContext(
+    query: string,
+    projectId: number
+  ): Promise<ResearchResult> {
+    try {
+      // Get project context for more targeted research
+      const project = await storage.getProject(projectId);
+      const context = project ? `Project: ${project.name} - ${project.description}` : '';
+
+      const research = await groqService.conductResearch(query, context);
+      
+      // Save research as agent session
+      await storage.createAgentSession({
+        projectId,
+        agentType: 'research',
+        messages: [
+          { role: 'user', content: query },
+          { role: 'assistant', content: research.summary }
+        ] as any,
+        metadata: { research }
+      });
+
+      return research;
+    } catch (error) {
+      console.error('Research error:', error);
+      throw new Error(`Research failed: ${error.message}`);
+    }
+  }
+
+  async speakMessage(message: string, agentType: string): Promise<string> {
+    try {
+      const audioResult = await elevenlabsService.speakAgentMessage(agentType, message);
+      return audioResult.audio_base64;
+    } catch (error) {
+      console.error('TTS error:', error);
+      throw new Error(`Text-to-speech failed: ${error.message}`);
+    }
+  }
+
+  private async addMessage(
+    sessionId: string,
+    agentType: 'planning' | 'research' | 'execution' | 'deployment',
+    content: string,
+    socketCallback?: (message: AgentMessage) => void
+  ): Promise<AgentMessage> {
+    const message: AgentMessage = {
+      id: `${agentType}_${Date.now()}`,
+      agentType,
+      content,
+      timestamp: new Date()
+    };
+
+    const messages = this.sessionMessages.get(sessionId) || [];
+    messages.push(message);
+    this.sessionMessages.set(sessionId, messages);
+
+    if (socketCallback) {
+      socketCallback(message);
+    }
+
+    return message;
+  }
+
+  private async updateAgentStatus(
+    agentType: 'planning' | 'research' | 'execution' | 'deployment',
+    status: 'idle' | 'active' | 'completed' | 'error',
+    currentTask?: string,
+    progress?: number
+  ): Promise<void> {
+    this.activeAgents.set(agentType, {
+      agentType,
+      status,
+      currentTask,
+      progress
+    });
+  }
+}
+
+export const aiOrchestrator = new AIOrchestrator();

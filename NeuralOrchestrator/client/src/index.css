@@ -1,0 +1,314 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: hsl(0, 0%, 100%);
+  --foreground: hsl(20, 14.3%, 4.1%);
+  --muted: hsl(60, 4.8%, 95.9%);
+  --muted-foreground: hsl(25, 5.3%, 44.7%);
+  --popover: hsl(0, 0%, 100%);
+  --popover-foreground: hsl(20, 14.3%, 4.1%);
+  --card: hsl(0, 0%, 100%);
+  --card-foreground: hsl(20, 14.3%, 4.1%);
+  --border: hsl(20, 5.9%, 90%);
+  --input: hsl(20, 5.9%, 90%);
+  --primary: hsl(207, 90%, 54%);
+  --primary-foreground: hsl(211, 100%, 99%);
+  --secondary: hsl(60, 4.8%, 95.9%);
+  --secondary-foreground: hsl(24, 9.8%, 10%);
+  --accent: hsl(60, 4.8%, 95.9%);
+  --accent-foreground: hsl(24, 9.8%, 10%);
+  --destructive: hsl(0, 84.2%, 60.2%);
+  --destructive-foreground: hsl(60, 9.1%, 97.8%);
+  --ring: hsl(20, 14.3%, 4.1%);
+  --radius: 0.5rem;
+
+  /* Carbon Design System Colors */
+  --carbon-gray-100: hsl(0, 0%, 8.6%);
+  --carbon-gray-90: hsl(0, 0%, 14.9%);
+  --carbon-gray-80: hsl(0, 0%, 22.4%);
+  --carbon-gray-70: hsl(0, 0%, 32.2%);
+  --carbon-gray-60: hsl(0, 0%, 43.5%);
+  --carbon-gray-50: hsl(0, 0%, 55.3%);
+  --carbon-gray-40: hsl(0, 0%, 65.9%);
+  --carbon-gray-30: hsl(0, 0%, 77.6%);
+  --carbon-gray-20: hsl(0, 0%, 87.8%);
+  --carbon-gray-10: hsl(0, 0%, 95.7%);
+  
+  /* IBM Colors */
+  --ibm-blue: hsl(214, 100%, 54%);
+  --ibm-purple: hsl(266, 99%, 62%);
+  --ibm-green: hsl(142, 60%, 51%);
+  --ibm-yellow: hsl(50, 92%, 54%);
+  --ibm-red: hsl(355, 100%, 76%);
+}
+
+.dark {
+  --background: hsl(240, 10%, 3.9%);
+  --foreground: hsl(0, 0%, 98%);
+  --muted: hsl(240, 3.7%, 15.9%);
+  --muted-foreground: hsl(240, 5%, 64.9%);
+  --popover: hsl(240, 10%, 3.9%);
+  --popover-foreground: hsl(0, 0%, 98%);
+  --card: hsl(240, 10%, 3.9%);
+  --card-foreground: hsl(0, 0%, 98%);
+  --border: hsl(240, 3.7%, 15.9%);
+  --input: hsl(240, 3.7%, 15.9%);
+  --primary: hsl(207, 90%, 54%);
+  --primary-foreground: hsl(211, 100%, 99%);
+  --secondary: hsl(240, 3.7%, 15.9%);
+  --secondary-foreground: hsl(0, 0%, 98%);
+  --accent: hsl(240, 3.7%, 15.9%);
+  --accent-foreground: hsl(0, 0%, 98%);
+  --destructive: hsl(0, 62.8%, 30.6%);
+  --destructive-foreground: hsl(0, 0%, 98%);
+  --ring: hsl(240, 4.9%, 83.9%);
+  --radius: 0.5rem;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply font-sans antialiased bg-background text-foreground;
+  }
+}
+
+/* Custom Carbon Design System Classes */
+.carbon-bg-100 {
+  background-color: var(--carbon-gray-100);
+}
+
+.carbon-bg-90 {
+  background-color: var(--carbon-gray-90);
+}
+
+.carbon-bg-80 {
+  background-color: var(--carbon-gray-80);
+}
+
+.carbon-bg-70 {
+  background-color: var(--carbon-gray-70);
+}
+
+.carbon-text-10 {
+  color: var(--carbon-gray-10);
+}
+
+.carbon-text-40 {
+  color: var(--carbon-gray-40);
+}
+
+.carbon-text-50 {
+  color: var(--carbon-gray-50);
+}
+
+.carbon-border-80 {
+  border-color: var(--carbon-gray-80);
+}
+
+.carbon-border-70 {
+  border-color: var(--carbon-gray-70);
+}
+
+.ibm-blue {
+  color: var(--ibm-blue);
+}
+
+.ibm-blue-bg {
+  background-color: var(--ibm-blue);
+}
+
+.ibm-purple {
+  color: var(--ibm-purple);
+}
+
+.ibm-purple-bg {
+  background-color: var(--ibm-purple);
+}
+
+.ibm-green {
+  color: var(--ibm-green);
+}
+
+.ibm-green-bg {
+  background-color: var(--ibm-green);
+}
+
+.ibm-yellow {
+  color: var(--ibm-yellow);
+}
+
+.ibm-yellow-bg {
+  background-color: var(--ibm-yellow);
+}
+
+.ibm-red {
+  color: var(--ibm-red);
+}
+
+/* Monaco Editor Dark Theme */
+.monaco-editor-dark {
+  background-color: var(--carbon-gray-100) !important;
+}
+
+.monaco-editor-dark .margin {
+  background-color: var(--carbon-gray-100) !important;
+}
+
+.monaco-editor-dark .monaco-editor-background {
+  background-color: var(--carbon-gray-100) !important;
+}
+
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--carbon-gray-90);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--carbon-gray-60);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--carbon-gray-50);
+}
+
+/* Custom Animation for Neural Network */
+@keyframes pulse-blue {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+@keyframes neural-connection {
+  0% {
+    stroke-dashoffset: 10;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+.pulse-blue {
+  animation: pulse-blue 2s ease-in-out infinite;
+}
+
+.neural-connection {
+  stroke-dasharray: 5,5;
+  animation: neural-connection 2s linear infinite;
+}
+
+/* IDE Layout Classes */
+.ide-layout {
+  height: 100vh;
+  overflow: hidden;
+  background-color: var(--carbon-gray-100);
+  color: var(--carbon-gray-10);
+  font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+}
+
+.ide-menu-bar {
+  height: 32px;
+  background-color: var(--carbon-gray-90);
+  border-bottom: 1px solid var(--carbon-gray-80);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  font-size: 14px;
+}
+
+.ide-main-container {
+  display: flex;
+  height: calc(100vh - 32px);
+}
+
+.ide-sidebar {
+  width: 320px;
+  background-color: var(--carbon-gray-90);
+  border-right: 1px solid var(--carbon-gray-80);
+  display: flex;
+  flex-direction: column;
+}
+
+.ide-editor-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.ide-tab-bar {
+  background-color: var(--carbon-gray-90);
+  border-bottom: 1px solid var(--carbon-gray-80);
+  display: flex;
+  align-items: center;
+  min-height: 36px;
+}
+
+.ide-editor-area {
+  flex: 1;
+  display: flex;
+}
+
+.ide-code-editor {
+  flex: 1;
+  background-color: var(--carbon-gray-100);
+}
+
+.ide-ai-panel {
+  width: 320px;
+  background-color: var(--carbon-gray-90);
+  border-left: 1px solid var(--carbon-gray-80);
+  display: flex;
+  flex-direction: column;
+}
+
+.ide-bottom-panel {
+  height: 256px;
+  background-color: var(--carbon-gray-90);
+  border-top: 1px solid var(--carbon-gray-80);
+  display: flex;
+}
+
+/* Code Editor Syntax Highlighting */
+.code-editor {
+  font-family: 'IBM Plex Mono', 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', 'Fira Mono', 'Roboto Mono', monospace;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.token.keyword {
+  color: var(--ibm-purple);
+}
+
+.token.string {
+  color: var(--ibm-green);
+}
+
+.token.number {
+  color: var(--ibm-yellow);
+}
+
+.token.comment {
+  color: var(--carbon-gray-40);
+}
+
+.token.function {
+  color: var(--ibm-blue);
+}
+
+.token.class-name {
+  color: var(--ibm-blue);
+}

@@ -61,19 +61,19 @@ export function useAgentOrchestrator() {
   useEffect(() => {
     if (isConnected) {
       requestAgentStatus();
-      
+
       // Set up periodic status requests
       const interval = setInterval(() => {
         requestAgentStatus();
       }, 10000); // Every 10 seconds
-      
+
       return () => clearInterval(interval);
     }
   }, [isConnected, requestAgentStatus]);
 
   // Calculate cortex information
   const calculatedCortexInfo = new Map<string, CortexInfo>();
-  
+
   if (agents.length > 0) {
     const cortexGroups = {
       sensory: agents.filter(a => a.cortex === 'sensory'),

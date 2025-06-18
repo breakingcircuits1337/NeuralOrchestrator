@@ -22,6 +22,28 @@ export interface CodeGenerationResult {
     success: boolean;
     output?: string;
     error?: string;
+
+
+  private assessTaskComplexity(prompt: string): 'low' | 'medium' | 'high' {
+    const complexityIndicators = {
+      high: ['architecture', 'system', 'microservice', 'database', 'authentication', 'security'],
+      medium: ['class', 'component', 'api', 'interface', 'algorithm'],
+      low: ['function', 'variable', 'method', 'helper', 'util']
+    };
+
+    const lowerPrompt = prompt.toLowerCase();
+    
+    for (const indicator of complexityIndicators.high) {
+      if (lowerPrompt.includes(indicator)) return 'high';
+    }
+    
+    for (const indicator of complexityIndicators.medium) {
+      if (lowerPrompt.includes(indicator)) return 'medium';
+    }
+    
+    return 'low';
+  }
+
   };
 }
 
@@ -38,8 +60,15 @@ export class AIOrchestrator extends EventEmitter {
     language: string = "typescript"
   ): Promise<CodeGenerationResult> {
     try {
-      // Assign coding agents
-      const agentIds = await agentNetwork.assignTask(`code_gen_${Date.now()}`, 'coder');
+      // Use optimal agent cluster for complex code generation
+      const taskComplexity = this.assessTaskComplexity(prompt);
+      const requiredRoles: any[] = ['coder', 'architect', 'tester'];
+      
+      const agentIds = await agentNetwork.getOptimalAgentCluster(
+        taskComplexity,
+        requiredRoles,
+        'reasoning'
+      );
       
       // Get project context
       const knowledgeGraph = await storage.getKnowledgeGraph(projectId);

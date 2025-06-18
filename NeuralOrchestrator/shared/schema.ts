@@ -230,7 +230,31 @@ export type InsertUser = z.infer<typeof insertUserSchema>;
 export type Project = typeof projects.$inferSelect;
 export type InsertProject = z.infer<typeof insertProjectSchema>;
 
-export type Agent = typeof agents.$inferSelect;
+export type Agent = {
+  id: string;
+  name: string;
+  role: string;
+  cortex: string;
+  llmProvider: string;
+  specializations: string[];
+  status: string;
+  workload: number;
+  expertise: any;
+  performance: any;
+  connections: string[];
+  memory: {
+    shortTerm: Record<string, any>;
+    longTerm: Record<string, any>;
+    interactions: any[];
+    learnings: any[];
+    collaborationWeights?: Record<string, number>;
+    neuralPathways?: {
+      strengthened: string[];
+      weakened: string[];
+      lastUpdate: Date;
+    };
+  };
+}
 export type InsertAgent = z.infer<typeof insertAgentSchema>;
 
 export type ProjectPhase = typeof projectPhases.$inferSelect;
